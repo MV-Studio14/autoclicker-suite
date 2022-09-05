@@ -1,18 +1,19 @@
-import os
 from time import sleep
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Listener, KeyCode
 from threading import Thread
-from zlib import compress, decompress
-from json import dumps, loads
-from random import uniform
-
 
 # CLI config thread
+from autoclick.Componets import comp_humanoid
+from autoclick.Configuration import ClickStyle
+from autoclick.Files import ConfigFile
+
+
 class Config(Thread):
-    def __init__(self, file):
+    def __init__(self):
         super().__init__()
-        self.delay, self.repeat, self.anti_cheat_time, self.anti_cheat_delay, self.vol, self.file = 0.0, 0, 0, 0.0, 0, file
+        self.file = ConfigFile()
+        self.cs = ClickStyle()
         self.terminate = False
 
     def run(self):
@@ -22,107 +23,79 @@ class Config(Thread):
     def stop(self):
         self.terminate = True
 
-    def base(self):
-        self.delay = 0.1
-        self.repeat = 15
-        self.anti_cheat_time = 200
-        self.anti_cheat_delay = 1
-        self.vol = 0
-
-    def readFile(self):
-        while True:
-            try:
-                with open(self.file, "rb") as f:
-                    return loads(decompress(f.read()).decode())
-            except:
-                print("[Error] failed to load/set config file, retrying...")
-                setup()
-                self.base()
-
-    def writeFile(self, dat):
-        with open(self.file, "wb") as f: f.write(compress(dumps(dat).encode()))
-
-    def list(self, dat, phrase):
+    def listPresets(self, phrase):
         print(phrase)
-        for i in dat["presets"]: print(f"- {i}")
+        for i in self.file.dat["presets"]:
+            print(f"- {i}")
         return input("> ")
 
     def load(self):
-        dat = self.readFile()
-        name = self.list(dat, "Choice a preset or load base (b): ")
-
         while not self.terminate:
-            if name == "b":
-                self.base();
-                break
-            elif not name in dat["presets"]:
+            name = self.listPresets("Select a clickStyle or load base (b): ")
+            cs = self.file.load(name)
+            if cs is None:
+                print("Invalid clickStyle name")
                 continue
-            else:
-                conf = dat["presets"][name]
-                self.delay = float(conf["delay"])
-                self.repeat = int(conf["repeat"])
-                self.anti_cheat_time = int(conf["act"])
-                self.anti_cheat_delay = float(conf["acd"])
-                self.vol = int(conf["vol"])
-                break
-            name = input("> ")
+            self.cs = cs
+            break
 
     def online(self):
         while not self.terminate:
-            cps = self.repeat / self.delay
-            evg = self.anti_cheat_time / (self.anti_cheat_time * self.delay / self.repeat + self.anti_cheat_delay)
+            cps = self.cs.repeat / self.cs.delay
+            evg = self.cs.anti_cheat_time / (self.cs.anti_cheat_time * self.cs.delay / self.cs.repeat + self.cs.anti_cheat_delay)
 
-            choice = input(
-                f"Choice what change ({int(cps)}cps, {int(evg)}evg):\n\t- delay (d) [{self.delay}]sec\n\t- repeat (r) [{self.repeat}]click\n\t- anti-cheat-time (t) [{self.anti_cheat_time}]click\n\t- anti-cheat-delay (a) [{self.anti_cheat_delay}]sec\n\t- humanoid volatility (h) [{self.vol}]%\n\n\t- save configuration (s)\n\t- load preset (l)\n\t- delete preset (e)\n> ")
-            if choice == "s":
-                self.save();
+            command = input(f"{self.cs.name if self.cs.name != 'b' else '- BASE -'}: ({int(cps)}cps, {int(evg)}evg):\n" +
+                           f"\t- (d) delay [{self.cs.delay}]sec\n" +
+                           f"\t- (r) repeat [{self.cs.repeat}]clicks\n" +
+                           f"\t- (t) anti-cheat-time [{self.cs.anti_cheat_time}]clicks\n" +
+                           f"\t- (a) anti-cheat-delay [{self.cs.anti_cheat_delay}]sec\n" +
+                           f"\t- (h) humanoid volatility [{self.cs.vol}]%\n\n" +
+                           f"\t- (s) save clickStyle\n" +
+                           f"\t- (l) load clickStyle\n" +
+                           f"\t- (e) delete clickStyle\n> "
+                           )
+
+            params = command.split(" ")
+            cmd = params[0]
+            params.pop(0)
+
+            if cmd == "s":
+                self.save()
                 continue
-            elif choice == "l":
-                self.load();
+            elif cmd == "l":
+                self.load()
                 continue
-            elif choice == "e":
-                self.delete();
+            elif cmd == "e":
+                self.delete()
                 continue
 
             try:
-                newVal = float(input("New value is: "))
+                newVal = float(params[0])
             except:
-                print("Enter a valid number (1234 12.34)");
+                print("Enter a valid number (1234 12.34)")
                 continue
 
-            if choice == "d":
-                self.delay = newVal
-            elif choice == "r":
-                self.repeat = int(newVal)
-            elif choice == "t":
-                self.anti_cheat_time = int(newVal)
-            elif choice == "a":
-                self.anti_cheat_delay = newVal
-            elif choice == "h":
-                self.vol = int(newVal)
+            if cmd == "d":
+                self.cs.delay = newVal
+            elif cmd == "r":
+                self.cs.repeat = int(newVal)
+            elif cmd == "t":
+                self.cs.anti_cheat_time = int(newVal)
+            elif cmd == "a":
+                self.cs.anti_cheat_delay = newVal
+            elif cmd == "h":
+                self.cs.vol = int(newVal)
 
     def save(self):
-        dat = self.readFile()
-        name = self.list(dat, "Configuration name (same name overwrite): ")
-
-        dat["presets"].update({
-            name: {
-                "delay": self.delay,
-                "repeat": self.repeat,
-                "act": self.anti_cheat_time,
-                "acd": self.anti_cheat_delay,
-                "vol": self.vol,
-            }})
-
-        self.writeFile(dat)
-        print("Configuration saved!")
+        name = self.listPresets("ClickStyle name (same name overwrite): ")
+        self.cs.name = name
+        self.file.save(self.cs)
+        print("ClickStyle saved!")
 
     def delete(self):
-        dat = self.readFile()
-        name = self.list(dat, "Configuration name (for DELETING): ")
-        dat["presets"].pop(name)
-        self.writeFile(dat)
-        print("Configuration deleted!")
+        name = self.listPresets("ClickStyle name (for DELETING!!!): ")
+        self.file.delete(name)
+        print("ClickStyle deleted!")
 
 
 class MouseClick(Thread):
@@ -141,16 +114,17 @@ class MouseClick(Thread):
         self.running = False
 
     def run(self):
+        global configThread
         while not self.terminate:
             while self.running:
-                for i in range(configThread.repeat): self.mouse.click(self.button)
-                self.cont += configThread.repeat
-                humanoid()
-                if self.cont >= configThread.anti_cheat_time:
+                for i in range(configThread.cs.repeat): self.mouse.click(self.button)
+                self.cont += configThread.cs.repeat
+                configThread = comp_humanoid(configThread.cs)
+                if self.cont >= configThread.cs.anti_cheat_time:
                     self.cont = 0
-                    sleep(configThread.anti_cheat_delay)
+                    sleep(configThread.cs.anti_cheat_delay)
                 else:
-                    sleep(configThread.delay)
+                    sleep(configThread.cs.delay)
 
     def stop(self):
         self.stop_click()
@@ -190,28 +164,13 @@ def onPress(key):
                 clickThread.button = Button.right
                 clickThread.start_click()
 
-
-# Click frequency modifier
-def humanoid():
-    perc = (configThread.delay * (configThread.vol / 2)) / 100
-    minSample = configThread.delay - perc
-    maxSample = configThread.delay + perc
-    configThread.delay = uniform(minSample, maxSample)
-
-# Make config file
-def setup():
-    print("Setup...")
-    with open(configThread.file, "wb") as f: f.write(compress("{}".encode()))
-
-
 def main():
     global left_click, right_click, clickThread, configThread, listener
 
     print("Loading configs")
-    configThread = Config(os.getenv("%APPDATA%") + "/CheatStudio/" + "cheatclick_config.dat")
+    configThread = Config()
     configThread.start()
 
-    print("Auto-click is starting...\n")
     left_click = KeyCode(char="z")
     right_click = KeyCode(char="x")
 
