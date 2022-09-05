@@ -48,3 +48,19 @@ class ConfigFile(File):
             cs.loadJson(self.dat["presets"][name])
             return cs
         return None
+
+class PortableStyleFile(File):
+    def __init__(self, file):
+        super().__init__(file)
+        self.dat = self.read()
+
+    def styleImport(self):
+        cs = ClickStyle(self.dat["name"])
+        cs.loadJson(self.dat["content"])
+        return cs
+
+    def styleExport(self, cs):
+        self.write({
+            "name": cs.name,
+            "content": cs.export()[cs.name]
+        })

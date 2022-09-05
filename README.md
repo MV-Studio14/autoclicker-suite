@@ -7,6 +7,7 @@ A collection of video game cheats
 - Save / load /delete click style
 - Load default style
 - CPS preview
+- Import / export clickstyle (*.csi)
 - Obfuscating techniques
   - Timed stop (Programmable)
   - Variable frequency (Programmable)
@@ -23,7 +24,6 @@ A collection of video game cheats
 ### Autoclicker
 - [ ] Configurable keys
 - [ ] Multiple enabling modes (press / toggle / switch)
-- [ ] Export / import single clicking style
 - [ ] Mimic mode (copy user clicking style)
 - [ ] Integrated anti-cheat (as workout)
 

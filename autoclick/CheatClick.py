@@ -1,3 +1,4 @@
+import os
 from time import sleep
 from pynput.mouse import Button, Controller
 from pynput.keyboard import Listener, KeyCode
@@ -6,7 +7,7 @@ from threading import Thread
 # CLI config thread
 from autoclick.Componets import comp_humanoid
 from autoclick.Configuration import ClickStyle
-from autoclick.Files import ConfigFile
+from autoclick.Files import ConfigFile, PortableStyleFile
 
 
 class Config(Thread):
@@ -39,6 +40,17 @@ class Config(Thread):
             self.cs = cs
             break
 
+    def save(self):
+        name = self.listPresets("ClickStyle name (same name overwrite): ")
+        self.cs.name = name
+        self.file.save(self.cs)
+        print("ClickStyle saved!")
+
+    def delete(self):
+        name = self.listPresets("ClickStyle name (for DELETING!!!): ")
+        self.file.delete(name)
+        print("ClickStyle deleted!")
+
     def online(self):
         while not self.terminate:
             cps = self.cs.repeat / self.cs.delay
@@ -52,7 +64,9 @@ class Config(Thread):
                            f"\t- (h) humanoid volatility [{self.cs.vol}]%\n\n" +
                            f"\t- (s) save clickStyle\n" +
                            f"\t- (l) load clickStyle\n" +
-                           f"\t- (e) delete clickStyle\n> "
+                           f"\t- (i) import clickStyle\n" +
+                           f"\t- (e) export clickStyle\n" +
+                           f"\t- (x) delete clickStyle\n> "
                            )
 
             params = command.split(" ")
@@ -65,8 +79,14 @@ class Config(Thread):
             elif cmd == "l":
                 self.load()
                 continue
-            elif cmd == "e":
+            elif cmd == "x":
                 self.delete()
+                continue
+            elif cmd == "e":
+                self.exp()
+                continue
+            elif cmd == "i":
+                self.imp()
                 continue
 
             try:
@@ -86,16 +106,15 @@ class Config(Thread):
             elif cmd == "h":
                 self.cs.vol = int(newVal)
 
-    def save(self):
-        name = self.listPresets("ClickStyle name (same name overwrite): ")
-        self.cs.name = name
-        self.file.save(self.cs)
-        print("ClickStyle saved!")
+    def imp(self):
+        file = input("file> ")
+        psf = PortableStyleFile(file)
+        self.cs = psf.styleImport()
+        print(f"ClickStyle {self.cs.name} imported!")
 
-    def delete(self):
-        name = self.listPresets("ClickStyle name (for DELETING!!!): ")
-        self.file.delete(name)
-        print("ClickStyle deleted!")
+    def exp(self):
+        psf = PortableStyleFile(os.path.expanduser("~/Desktop") + f"\\{self.cs.name}.csi")
+        psf.styleExport(self.cs)
 
 
 class MouseClick(Thread):
