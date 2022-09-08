@@ -138,7 +138,7 @@ class MouseClick(Thread):
             while self.running:
                 for i in range(configThread.cs.repeat): self.mouse.click(self.button)
                 self.cont += configThread.cs.repeat
-                configThread = comp_humanoid(configThread.cs)
+                configThread.cs = comp_humanoid(configThread.cs)
                 if self.cont >= configThread.cs.anti_cheat_time:
                     self.cont = 0
                     sleep(configThread.cs.anti_cheat_delay)
